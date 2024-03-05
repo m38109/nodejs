@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const mysql = require('mysql2');
 
 const app = express();
@@ -25,29 +24,50 @@ connection.connect(error => {
 app.put('/assignTeacher/:id', (req, res) => {
     const Course_upid = req.params.id;
     const TeacherID = req.body.TeacherID;
+    const UserID = req.body.UserID;
 
+    //verify user's role
+    const checkAdminSql = `SELECT RoleID
+                           FROM users
+                           WHERE UserID = ?`;
 
-    const AssignTeacherSql = `UPDATE courses SET TeacherID=? WHERE CourseID=?`;
-    connection.query(AssignTeacherSql, [TeacherID, Course_upid], (error, results) => {
+    connection.query(checkAdminSql, [UserID], (error, results) => {
         if (error) {
-            res.status(500).send("Failed to assign teacher to course.");
+            res.status(500).send("Failed to verify user role.");
             throw error;
         }
 
-        const updatedData = {
-            CourseID: Course_upid,
-            TeacherID: TeacherID
-        };
+        //Check if the user is an Admin
+        if (results.length > 0 && results[0].RoleID === 1) {
+            //User is an Admin, proceed to assign teacher to course
+            const AssignTeacherSql = `UPDATE courses
+                                      SET TeacherID=?
+                                      WHERE CourseID = ?`;
+            connection.query(AssignTeacherSql, [TeacherID, Course_upid], (error, results) => {
+                if (error) {
+                    res.status(500).send("Failed to assign teacher to course.");
+                    throw error;
+                }
 
-        res.status(200).json({
-            message: "Teacher successfully assigned to course.",
-            updatedData: updatedData
-        });
+                const updatedData = {
+                    CourseID: Course_upid,
+                    TeacherID: TeacherID
+                };
+
+                res.status(200).json({
+                    message: "Teacher successfully assigned to course.",
+                    updatedData: updatedData
+                });
+            });
+        } else {
+            //User is not an Admin, deny the request
+            res.status(403).send("Unauthorized!!")
+        }
     });
 });
 
-// End point to enable or disable the availability of a course
 
+// Endpoint to enable or disable the availability of a course
 app.put('/courseAvailability/:id', (req, res) => {
     const Course_upid = req.params.id;
     const isAvailable = req.body.isAvailable;
@@ -72,6 +92,14 @@ app.put('/courseAvailability/:id', (req, res) => {
     });
 });
 
+// Endpoint to view all the available courses
+app.get('/viewcourses/', (req, res) =>{
+    const CourseID = req.body.CourseID;
+    const Title = req.body.Title;
+    const TeacherName = req.body.TeacherID;
+
+
+})
 
 
 
