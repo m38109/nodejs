@@ -71,35 +71,47 @@ app.put('/assignTeacher/:id', (req, res) => {
 app.put('/courseAvailability/:id', (req, res) => {
     const Course_upid = req.params.id;
     const isAvailable = req.body.isAvailable;
+    const UserID= req.body.UserID;
 
-    const courseAvailabilitySql = 'UPDATE courses SET isAvailable =? WHERE CourseID=?';
-    connection.query(courseAvailabilitySql, [isAvailable, Course_upid], (error, results) => {
+    //verify user's role
+    const checkAdminSql = `SELECT RoleID
+                           FROM users
+                           WHERE UserID = ?`;
+
+    connection.query(checkAdminSql, [UserID], (error, results) => {
         if (error) {
-            res.status(500).send("Failed to Enable or Disable the availability of a course.");
+            res.status(500).send("Failed to verify user role.");
             throw error;
         }
 
-        const updatedDate={
-            CourseID : Course_upid,
-            isAvailable : isAvailable
-        };
+        //Check if the user is an Admin
+        if (results.length > 0 && results[0].RoleID === 1) {
+            //User is an Admin, proceed to assign teacher to course
+            const courseAvailabilitySql = 'UPDATE courses SET isAvailable =? WHERE CourseID=?';
+            connection.query(courseAvailabilitySql, [isAvailable, Course_upid], (error, results) => {
+                if (error) {
+                    res.status(500).send("Failed to Enable or Disable the availability of a course.");
+                    throw error;
+                }
 
-        res.status(200).json({
-            message: "Course Availability has been changed.",
-            UpdatedData: updatedDate
+                const updatedData = {
+                    CourseID: Course_upid,
+                    isAvailable: isAvailable
+                };
 
-        });
+                res.status(200).json({
+                    message: "Course Availability has been changed.",
+                    updatedData: updatedData
+                });
+            });
+        } else {
+            //User is not an Admin, deny the request
+            res.status(403).send("Unauthorized!!")
+        }
     });
 });
 
-// Endpoint to view all the available courses
-app.get('/viewcourses/', (req, res) =>{
-    const CourseID = req.body.CourseID;
-    const Title = req.body.Title;
-    const TeacherName = req.body.TeacherID;
 
-
-})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}.`);
