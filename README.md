@@ -43,11 +43,6 @@ Run the application using the command `node app.js`. The server will start on po
 - **PUT** `/marks/`
 - Allows a teacher to assign marks to a student for a course.
 
-## Security
-This application does not include authentication or authorization mechanisms. It is recommended to implement suitable security measures for production use.
-
-## Contributions
-Contributions are welcome. Please open an issue or submit a pull request with your improvements.
 
 ## License
 This project is open-sourced under the MIT License.
