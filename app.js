@@ -130,7 +130,56 @@ app.get('/viewcourses/',(req, res) => {
 });
 
 // Student enroll in available course once
+app.put('/enroll', (req,res) =>{
 
+    const CourseID = req.body.CourseID;
+    const UserID = req.body.UserID;
+
+    //verify role
+    const checkRoleSql= 'SELECT Role FROM roles WHERE userID=?';
+    connection.query(checkRoleSql, [UserID], (error, results) => {
+        if (error) {
+            res.status(500).send("Failed to verify user role.");
+            throw error;
+        }
+
+        //If the user is not a student
+        if (results.length > 0 && results[0].RoleID !== 3) {
+           res.status(400).send('Only Student can enroll in courses');
+        }
+        // Check if Courses is Available
+        const CourseAbailabilitySql ='SELECT isAvailable FROM courses WHERE CourseID=?';
+        connection.query(CourseAbailabilitySql, [CourseID], (error, results) =>{
+            if (results.length >0 && results[0].isAvailable === 0){
+                res.status(400).send('Course is not Available.');
+            }
+            // Check if the student has enrolled in the course
+            const enrollmentCheckSql = 'SELECT * FROM enrolments WHERE CourseID =? AND UserID=?';
+            connection.query(enrollmentCheckSql, [CourseID, UserID], (error, results) =>{
+                if (results.length > 0) {
+                    res.status(400).send('Student has enrolled in the course.')
+                }
+                //Enroll the student in the course
+                const enrollstuendtSql = 'INSERT INTO enrolments (Marks,CourseID, UserID) VALUES (NULL,?,?)';
+                connection.query(enrollstuendtSql, [CourseID, UserID], (error,results) =>{
+                    if (error){
+                        res.status(400).send('Failed');
+                        throw error;
+                    }
+                    const updateData ={
+                        CourseID:CourseID,
+                        UserID: UserID
+                    }
+
+                    res.status(200).json({
+                    message: "Student enrolled successfully.",
+                    updateData: updateData
+                    });
+                });
+            });
+        });
+    });
+});
 
 
 app.listen(port, () => {
