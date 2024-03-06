@@ -186,6 +186,59 @@ app.put('/enroll/', (req, res) => {
 });
 
 
+//Teacher assign marks to students
+app.put('/marks/', (req, res) => {
+    const { CourseID, Mark, UserID, enrolmentID, TeacherID } = req.body
+
+    // Verify role
+    const checkRoleSql = 'SELECT RoleID FROM users WHERE UserID = ?';
+    connection.query(checkRoleSql, [UserID], (error, results) => {
+        if (error) {
+            console.error("Failed to verify user role:", error);
+            return res.status(500).send("Failed to verify user role.");
+        }
+
+        // If the user is not a student
+        if (results.length > 0 && results[0].RoleID !== 2) {
+            return res.status(400).send('Only Teachers can give the marks.');
+        }
+        // check if the teacher teaches the course
+        const teachingSql= 'SELECT * FROM courses WHERE CourseID = ? AND TeacherID = ? AND isAvailable = true';
+        connection.query(teachingSql, [CourseID,TeacherID], (error,results) =>{
+            if (results.length === 0){
+            res.status(400).send('Not the teacher of this course.');
+            }
+            //Check if the enrolmentID exist
+            const CheckEnrolmentSql = 'SELECT * FROM enrolments WHERE enrolmentID=? ';
+                connection.query(CheckEnrolmentSql,[enrolmentID], (error, results) =>{
+                if (results.length === 0){
+                res.status(400).send('Enrolment ID do not exist.');
+                }
+                //Pass all checks, update the mark
+                const UpdateMarkSql = 'UPDATE enrolments SET Mark =? WHERE enrolmentID=?';
+                connection.query(UpdateMarkSql,
+                    [Mark, enrolmentID],
+                    (error, results) => {
+                        if (error) {
+                            return res.status(500).send('Failed to assign mark.');
+                        }
+
+                        const updatedData = {
+                            "EnrolmentID": enrolmentID,
+                            "Mark": Mark,
+                            "Course": CourseID
+                        };
+
+                        res.status(200).json({
+                            message: "Mark Updated!.",
+                            enrolment: updatedData
+                        });
+                    });
+            });
+        });
+    });
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}.`);
 });
