@@ -1,7 +1,7 @@
 # End-Module Assignment
 
 ## Introduction
-This project provides a RESTful API to meet the provied functionalities, built with Node.js and Express, and uses MySQL for data storage. It allows for operations such as assigning teachers to courses, managing course availability, enrolling students, and assigning marks.
+This project provides a RESTful API to meet the provided functionalities, built with Node.js and Express, and uses MySQL for data storage. It allows for operations such as assigning teachers to courses, managing course availability, enrolling students, and assigning marks.
 
 ## Getting Started
 
