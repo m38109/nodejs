@@ -130,50 +130,54 @@ app.get('/viewcourses/',(req, res) => {
 });
 
 // Student enroll in available course once
-app.put('/enroll', (req,res) =>{
+app.put('/enroll/', (req, res) => {
+    const { CourseID, UserID } = req.body;
 
-    const CourseID = req.body.CourseID;
-    const UserID = req.body.UserID;
-
-    //verify role
-    const checkRoleSql= 'SELECT Role FROM roles WHERE userID=?';
+    // Verify role
+    const checkRoleSql = 'SELECT RoleID FROM users WHERE UserID = ?';
     connection.query(checkRoleSql, [UserID], (error, results) => {
         if (error) {
-            res.status(500).send("Failed to verify user role.");
-            throw error;
+            console.error("Failed to verify user role:", error);
+            return res.status(500).send("Failed to verify user role.");
         }
 
-        //If the user is not a student
+        // If the user is not a student
         if (results.length > 0 && results[0].RoleID !== 3) {
-           res.status(400).send('Only Student can enroll in courses');
+            return res.status(400).send('Only Students can enroll in courses.');
         }
-        // Check if Courses is Available
-        const CourseAbailabilitySql ='SELECT isAvailable FROM courses WHERE CourseID=?';
-        connection.query(CourseAbailabilitySql, [CourseID], (error, results) =>{
-            if (results.length >0 && results[0].isAvailable === 0){
-                res.status(400).send('Course is not Available.');
+
+        // Check if the course is available
+        const CourseAvailabilitySql = 'SELECT isAvailable FROM courses WHERE CourseID = ?';
+        connection.query(CourseAvailabilitySql, [CourseID], (error, results) => {
+            if (error || results.length === 0 || results[0].isAvailable === 0) {
+                console.error("Course availability check failed:", error);
+                return res.status(400).send('Course is not available.');
             }
-            // Check if the student has enrolled in the course
-            const enrollmentCheckSql = 'SELECT * FROM enrolments WHERE CourseID =? AND UserID=?';
-            connection.query(enrollmentCheckSql, [CourseID, UserID], (error, results) =>{
-                if (results.length > 0) {
-                    res.status(400).send('Student has enrolled in the course.')
+
+            // Check if the student has already enrolled in the course
+            const enrollmentCheckSql = 'SELECT * FROM enrolments WHERE CourseID = ? AND UserID = ?';
+            connection.query(enrollmentCheckSql, [CourseID, UserID], (error, results) => {
+                if (error || results.length > 0) {
+                    console.error("Enrollment check failed:", error);
+                    return res.status(400).send('Student has already enrolled in the course.');
                 }
-                //Enroll the student in the course
-                const enrollstuendtSql = 'INSERT INTO enrolments (Marks,CourseID, UserID) VALUES (NULL,?,?)';
-                connection.query(enrollstuendtSql, [CourseID, UserID], (error,results) =>{
-                    if (error){
-                        res.status(400).send('Failed');
-                        throw error;
+
+                // Enroll the student in the course
+                const enrollStudentSql = 'INSERT INTO enrolments (Mark, CourseID, UserID) VALUES (NULL, ?, ?)';
+                connection.query(enrollStudentSql, [CourseID, UserID], (error, results) => {
+                    if (error) {
+                        console.error("Failed to enroll student:", error);
+                        return res.status(500).send('Failed to enroll student.');
                     }
-                    const updateData ={
-                        CourseID:CourseID,
-                        UserID: UserID
-                    }
+
+                    const updatedData = {
+                    CourseID: CourseID,
+                    UserID: UserID
+                    };
 
                     res.status(200).json({
-                    message: "Student enrolled successfully.",
-                    updateData: updateData
+                        message: "Student enrolled successfully.",
+                        enrolment: updatedData
                     });
                 });
             });
